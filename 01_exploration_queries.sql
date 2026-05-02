@@ -145,4 +145,88 @@ LIMIT 1;
 -- Which combination of City and Customer type generates the highest average total sales per transaction?
 SELECT city, customer_type, AVG(total_sales) FROM sales GROUP BY city, customer_type ORDER BY AVG(total_sales) DESC LIMIT 1; -- Naypyitaw & Member : 345.23101546
 
+-- Level 6: Professional Logic (The Strategic Analyst)
+
+-- 1. Customer Segmentation
+-- Create a query that categorizes every transaction into three groups: 'Small Spend' (under $200), 'Medium Spend' ($200–$600), and 'High Spend' (over $600).
+SELECT *,
+CASE
+WHEN total_sales < 200 THEN 'Small Spend'
+WHEN 200 < total_sales AND total_sales < 600 THEN 'Medium Spend'
+WHEN 600 < total_sales THEN 'High Spend'
+ElSE 'Invalid Value'
+END AS transaction_category
+FROM sales;
+
+-- Show the count of transactions in each group.
+SELECT
+CASE
+WHEN total_sales < 200 THEN 'Small Spend'
+WHEN 200 < total_sales AND total_sales < 600 THEN 'Medium Spend'
+WHEN 600 < total_sales THEN 'High Spend'
+ElSE 'Invalid Value'
+END AS transaction_category,
+COUNT(invoice_id)
+FROM sales GROUP BY transaction_category;
+
+-- 2. Performance Comparison
+-- Calculate the average rating for each branch, but display it alongside the "Overall Average" for the entire supermarket in the same row. This allows you to see exactly how much higher or lower a branch is compared to the company average.
+WITH cte_avg_overall_rating AS (
+    SELECT AVG(rating) AS avg_overall_rating
+    FROM sales
+)
+SELECT branch, AVG(rating) AS avg_branch_rating,
+(SELECT cte_avg_overall_rating.avg_overall_rating
+FROM  cte_avg_overall_rating)
+FROM sales
+GROUP BY branch
+
+-- or
+SELECT 
+    branch, 
+    AVG(rating) AS avg_branch_rating,
+    (SELECT AVG(rating) FROM sales) AS overall_avg -- Simple & Direct
+FROM sales
+GROUP BY branch;
+
+-- 3. Peak Sales Window
+-- Instead of just finding the busiest hour, categorize the sale_time into 'Morning' (before 12:00), 'Afternoon' (12:00–17:00), and 'Evening' (after 17:00). Which time of day generates the most total revenue?
+SELECT
+CASE
+WHEN HOUR(sale_time) < 12 THEN 'Morning'
+WHEN 12 <= HOUR(sale_time) AND HOUR(sale_time) <= 17 THEN 'Afternoon'
+WHEN HOUR(sale_time) > 17 THEN 'Evening'
+ELSE 'Invalid Value'
+END AS categorize_sale_time,
+SUM(total_sales) AS time_total_sales
+FROM sales GROUP BY categorize_sale_time ORDER BY time_total_sales DESC LIMIT 1;
+
+-- 4. The "Member Loyalty" Gap
+-- For each product line, calculate the average unit price paid by "Members" versus "Normal" customers. Use a CASE statement to create two columns (one for Member Avg, one for Normal Avg) so they appear side-by-side for easy comparison.
+SELECT product_line, customer_type, AVG(unit_price) FROM sales GROUP BY product_line, customer_type;
+
+-- I tries CASE also
+SELECT 
+    product_line,
+    AVG(CASE WHEN customer_type = 'Member' THEN unit_price END) AS member_avg_price,
+    AVG(CASE WHEN customer_type = 'Normal' THEN unit_price END) AS normal_avg_price
+FROM sales
+GROUP BY product_line;
+
+-- 5. Profitability Ranking
+-- Rank the product lines based on their gross_income, but do it within each branch. For example, show the #1 product line for Alex, the #1 for Giza, and the #1 for Cairo in a single result set. (This is a classic "Top N per Group" problem).
+SELECT branch, product_line, SUM(gross_income), RANK() OVER (PARTITION BY branch ORDER BY SUM(gross_income) DESC) AS branch_rank FROM sales GROUP BY branch, product_line;
+
+-- To get the "Top N per group" (the #1 for each branch), you just need to wrap your query in a CTE or Subquery to filter the rank.
+WITH RankedProductLines AS (
+    SELECT 
+        branch, 
+        product_line, 
+        SUM(gross_income) AS total_income, 
+        RANK() OVER (PARTITION BY branch ORDER BY SUM(gross_income) DESC) AS branch_rank 
+    FROM sales 
+    GROUP BY branch, product_line
+)
+SELECT * FROM RankedProductLines WHERE branch_rank = 1
+
 SELECT * FROM sales;
