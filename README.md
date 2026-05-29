@@ -1,4 +1,4 @@
-# 🛒 Supermarket Sales: Digging into Retail Data with SQL
+# Supermarket Sales: Digging into Retail Data with SQL
 
 Hi! Welcome to my Supermarket Sales analysis project. 
 
