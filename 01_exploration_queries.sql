@@ -229,4 +229,12 @@ WITH RankedProductLines AS (
 )
 SELECT * FROM RankedProductLines WHERE branch_rank = 1
 
+SELECT 
+        branch, 
+        product_line, 
+        SUM(gross_income) AS total_income, 
+        RANK() OVER (PARTITION BY branch ORDER BY SUM(gross_income) DESC) AS branch_rank 
+    FROM sales 
+    GROUP BY branch, product_line
+    
 SELECT * FROM sales;
